@@ -1,16 +1,40 @@
 {
-  "name": "cts-react-native-android-handterminal-printer-nfc",
-  "version": "0.5.0",
-  "description": "using Unitech NFC and Printer",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "_from": "git+https://github.com/cts-yazilim/cts-react-native-android-handterminal-printer-nfc.git",
+  "_id": "cts-react-native-android-handterminal-printer-nfc@0.5.0",
+  "_inBundle": false,
+  "_location": "/cts-react-native-android-handterminal-printer-nfc",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "git",
+    "raw": "https://github.com/cts-yazilim/cts-react-native-android-handterminal-printer-nfc",
+    "rawSpec": "https://github.com/cts-yazilim/cts-react-native-android-handterminal-printer-nfc",
+    "saveSpec": "git+https://github.com/cts-yazilim/cts-react-native-android-handterminal-printer-nfc.git",
+    "fetchSpec": "https://github.com/cts-yazilim/cts-react-native-android-handterminal-printer-nfc.git",
+    "gitCommittish": null
   },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "git+https://github.com/cts-yazilim/cts-react-native-android-handterminal-printer-nfc.git#b6490029e1efebc0f94fa4fad1201d0c76469c70",
+  "_spec": "https://github.com/cts-yazilim/cts-react-native-android-handterminal-printer-nfc",
+  "_where": "C:\\Users\\Saksar\\Desktop\\Lib\\TestModule",
+  "author": {
+    "name": "selcukaksar"
+  },
+  "bundleDependencies": false,
+  "deprecated": false,
+  "description": "using Unitech NFC and Printer",
   "keywords": [
     "Unitech",
     "Printer",
     "NfcReader"
   ],
-  "author": "selcukaksar",
-  "license": "ISC"
+  "license": "ISC",
+  "main": "index.js",
+  "name": "cts-react-native-android-handterminal-printer-nfc",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "0.5.0"
 }
