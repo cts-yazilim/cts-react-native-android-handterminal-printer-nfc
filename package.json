@@ -1,0 +1,16 @@
+{
+  "name": "cts-react-native-android-handterminal-printer-nfc",
+  "version": "0.5.0",
+  "description": "using Unitech NFC and Printer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Unitech",
+    "Printer",
+    "NfcReader"
+  ],
+  "author": "selcukaksar",
+  "license": "ISC"
+}
