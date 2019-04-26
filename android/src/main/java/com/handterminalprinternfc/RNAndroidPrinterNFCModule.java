@@ -11,11 +11,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.Map;
 import java.util.HashMap;
+
+import com.google.gson.Gson;
 
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -43,12 +44,14 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         return "RNAndroidPrinterNFC";
     }
 
-    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@React METHOD @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@React METHOD
+    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     @ReactMethod
     public void NfcInit() {
         NfcReaderInit();
     }
+
     @ReactMethod
     public void NfcOpen() {
         OpenReader();
@@ -59,19 +62,18 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         CheckPicc();
     }
 
-   
     @ReactMethod
     public void PrinterCreate() {
         PrinterInit();
     }
-   
 
     @ReactMethod
-    public void PrintMsg(String data) {
-        PrintText(data);
+    public void PrintMsg(String data, Boolean Tekrar) {
+        PrintText(data, Tekrar);
     }
 
-    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@React METHOD@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@React
+    // METHOD@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     // @@@@@@@@@@ PRINTER @@@@@@@@@@@@@@@@@@@@@@
 
@@ -79,8 +81,8 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
     // Yazma talebi gonderildiginde cihazda kagit algilanmaz ise
     // DeviceEmitter tarafinda PrinterPaperStatus bolumunu tetikler
     private final static String PRNT_ACTION = "android.prnt.message";
-    public void PrinterInit()
-    {
+
+    public void PrinterInit() {
         IntentFilter filter = new IntentFilter();
         filter.addAction(PRNT_ACTION);
         reactContext.registerReceiver(mPrtReceiver, filter);
@@ -98,19 +100,59 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         }
     };
 
-    public void PrintText(String msg) 
-    {
+    public void PrintText(String data, Boolean Tekrar) {
+        Gson gson = new Gson();
+        PrinterData pData = gson.fromJson(data, PrinterData.class);
+
         PrinterManager printer = new PrinterManager();
-        
+
         printer.setupPage(384, -1);
-        int ret =printer.drawTextEx(msg, 5, 0,300,-1, "arial",  24, 0, 0, 0);
-        ret=printer.printPage(0);
+        String fisTekrarMsg = "";
+        if (Tekrar) {
+            fisTekrarMsg = "\t\t\t\t\tFiş Tekrarı\n";
+        }
+        int ret = printer.drawTextEx("\n\t\t\t\t\t\tOFÇAY\n", 5, 0, 450, -1, "arial", 26, 0, 0x0001, 0);
+        ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 450, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx(fisTekrarMsg, 5, ret - 1, 450, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 450, -1, "arial", 24, 0, 0, 0);
+        for (Alim alim : pData.Alimlar) {
+            ret += printer.drawTextEx(GenerateUreticiBilgileri(alim), 5, ret - 1, 450, -1, "arial", 24, 0, 0, 0);
+
+        }
+        ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 450, -1, "arial", 24, 0, 0, 0);
         
+        
+        ret = printer.printPage(0);
+
         Intent i = new Intent("android.prnt.message");
         i.putExtra("ret", ret);
 
         reactContext.sendBroadcast(i);
-       
+
+    }
+
+    private String GenerateAliciBilgileri(PrinterData data) {
+        String text = "------------------------------------------------\n" + "\n" + "  Eksper Adı:\t" + data.EksperAdi
+                + "\n" + "  Alım Yeri:\t" + data.AlimYeriAdi + "\n" + "  Fabrika:\t" + data.FabrikaAdi + "\n";
+
+        return text;
+    }
+
+    private String GenerateUreticiBilgileri(Alim data) {
+        String NakitBilgiler = "";
+        String OdemeYapildi = "";
+        if (data.NakitAlim) {
+            NakitBilgiler = " Tutar\t" + data.Tutar + "\n" + " Kesinti Tutar\t" + data.KesintiTutar + "\n"
+                    + " Net Tutar\t" + data.NetTutar + " \n";
+            OdemeYapildi = data.NetTutar + " Ödeme yapıldı\n";
+        }             
+        String text = "************************************************\n" + " Mustashil Adı:\t" + data.UreticiAdi
+                + "\n" + " Tarih/Saat:\t" + data.Tarih + "\n" + " Ağırlık:\t" + data.Agirlik + "\n" + " Fire:\t"
+                + data.Fire + "\n" + " Cüzdan No:\t" + data.CuzdanNo + " \n" + NakitBilgiler + "\n"
+                + "------------------------------------------------\n" + " Net Ağırlık:\t" + data.NetAgirlik + "\n"
+                + " Ödeme: " + data.Odeme + "\n" + OdemeYapildi +
+                "\n";
+        return text;
     }
 
     // @@@@@@@@@@ PRINTER @@@@@@@@@@@@@@@@@@@@@@
