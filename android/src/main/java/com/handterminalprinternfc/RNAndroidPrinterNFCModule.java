@@ -160,15 +160,21 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         if (Tekrar) {
             fisTekrarMsg = "\t\t\t\t\tFiş Tekrarı\n";
         }
-        int ret = printer.drawTextEx("\n\t\t\t\t\t\tOFÇAY\n", 5, 0, 450, -1, "arial", 26, 0, 0x0001, 0);
-        ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 450, -1, "arial", 25, 0, 0x0001, 0);
-        ret += printer.drawTextEx(fisTekrarMsg, 5, ret - 1, 450, -1, "arial", 25, 0, 0x0001, 0);
-        ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 450, -1, "arial", 24, 0, 0, 0);
+        int ret = printer.drawTextEx("\n\t\t\t\t\t\tOFÇAY\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
+        ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx(fisTekrarMsg, 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
         for (Alim alim : pData.Alimlar) {
-            ret += printer.drawTextEx(GenerateUreticiBilgileri(alim), 5, ret - 1, 450, -1, "arial", 24, 0, 0, 0);
+            String OdemeYapildi = "";
+            if (alim.NakitAlim) {
+                OdemeYapildi = alim.NetTutar + " Ödeme yapıldı\n";
+            }
 
+            ret += printer.drawTextEx(GenerateUreticiBilgileri(alim), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+            ret += printer.drawTextEx( " Net Ağırlık:\t"+ alim.NetAgirlik + "\n" , 5,  ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
+            ret += printer.drawTextEx(  " Ödeme: " + alim.Odeme + "\n" +  OdemeYapildi + "\n", 5, ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
         }
-        ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 450, -1, "arial", 24,
+        ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 384, -1, "arial", 24,
                 0, 0, 0);
 
         ret = printer.printPage(0);
@@ -181,8 +187,10 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
     }
 
     private String GenerateAliciBilgileri(PrinterData data) {
-        String text = "------------------------------------------------\n" + "\n" + "  Eksper Adı:\t" + data.EksperAdi
-                + "\n" + "  Alım Yeri:\t" + data.AlimYeriAdi + "\n" + "  Fabrika:\t" + data.FabrikaAdi + "\n";
+        String text = "------------------------------------------------\n" + "\n" + 
+                      "  Eksper Adı:\t" + data.EksperAdi+ "\n" + 
+                      "  Alım Yeri:\t" + data.AlimYeriAdi + "\n" + 
+                      "  Fabrika:\t" + data.FabrikaAdi + "\n";
 
         return text;
     }
@@ -191,15 +199,18 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         String NakitBilgiler = "";
         String OdemeYapildi = "";
         if (data.NakitAlim) {
-            NakitBilgiler = " Tutar\t" + data.Tutar + "\n" + " Kesinti Tutar\t" + data.KesintiTutar + "\n"
-                    + " Net Tutar\t" + data.NetTutar + " \n";
+            NakitBilgiler = " Tutar:\t" + data.Tutar + "\n" + " Kesinti Tutar:\t" + data.KesintiTutar + "\n"
+                    + " Net Tutar:\t" + data.NetTutar + " \n";
             OdemeYapildi = data.NetTutar + " Ödeme yapıldı\n";
         }
-        String text = "*********************************************\n" + " Mustashil Adı:\t" + data.UreticiAdi
-                + "\n" + " Tarih/Saat:\t" + data.Tarih + "\n" + " Ağırlık:\t" + data.Agirlik + "\n" + " Fire:\t"
-                + data.Fire + "\n" + " Cüzdan No:\t" + data.CuzdanNo + " \n" + NakitBilgiler + "\n"
-                + "------------------------------------------------\n" + " Net Ağırlık:\t" + data.NetAgirlik + "\n"
-                + " Ödeme: " + data.Odeme + "\n" + OdemeYapildi + "\n";
+        String text = "**************************************\n" +
+                     " Mustashil Adı:\t" + data.UreticiAdi+ "\n" + 
+                     " Tarih/Saat:\t" + data.Tarih + "\n" + 
+                     " Ağırlık:\t" + data.Agirlik + "\n" + 
+                     " Fire:\t"+ data.Fire + "\n" +
+                    " Cüzdan No:\t" + data.CuzdanNo + " \n"
+                     + NakitBilgiler + "\n"
+                + "------------------------------------------------\n" ;
         return text;
     }
 
