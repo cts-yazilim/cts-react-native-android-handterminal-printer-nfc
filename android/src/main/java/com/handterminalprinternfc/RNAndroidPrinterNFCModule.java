@@ -1,5 +1,10 @@
 package com.handterminalprinternfc;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+
 import android.util.Log;
 import android.device.PiccManager;
 import android.device.PrinterManager;
@@ -10,6 +15,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Environment;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,6 +52,49 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
 
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@React METHOD
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    @ReactMethod
+    public void Test() {
+        try {
+
+            // String path = "/data/data/com.yascayalim/databases/";
+            // Log.d("DBFILE", "Path: " + path);
+            // File directory = new File(path);
+            // File[] files = directory.listFiles();
+            // Log.d("DBFILE", "Size: " + files.length);
+            // for (int i = 0; i < files.length; i++) {
+            //     Log.d("DBFILE", "FileName:" + files[i].getName());
+            // }
+
+            final String inFileName = reactContext.getDatabasePath("dataDB").getPath();
+            Log.d("DBFILE", inFileName);
+            File dbFile = new File(inFileName);
+            FileInputStream fis = new FileInputStream(dbFile);
+
+            String outFileName = Environment.getExternalStorageDirectory() + "/database_copy.db";
+            Log.d("DBFILE", outFileName);
+
+            // Open the empty db as the output stream
+            OutputStream output = new FileOutputStream(outFileName);
+
+            // Transfer bytes from the inputfile to the outputfile
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = fis.read(buffer)) > 0) {
+                output.write(buffer, 0, length);
+            }
+
+            // Close the streams
+            output.flush();
+            output.close();
+            fis.close();
+            Log.d("DBFILE", "BAŞARILI");
+
+        } catch (Exception ex) {
+            Log.d("DBFILE", "DOSYA HATA" + ex.toString());
+        }
+
+    }
 
     @ReactMethod
     public void NfcInit() {
@@ -119,9 +168,9 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
             ret += printer.drawTextEx(GenerateUreticiBilgileri(alim), 5, ret - 1, 450, -1, "arial", 24, 0, 0, 0);
 
         }
-        ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 450, -1, "arial", 24, 0, 0, 0);
-        
-        
+        ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 450, -1, "arial", 24,
+                0, 0, 0);
+
         ret = printer.printPage(0);
 
         Intent i = new Intent("android.prnt.message");
@@ -145,13 +194,12 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
             NakitBilgiler = " Tutar\t" + data.Tutar + "\n" + " Kesinti Tutar\t" + data.KesintiTutar + "\n"
                     + " Net Tutar\t" + data.NetTutar + " \n";
             OdemeYapildi = data.NetTutar + " Ödeme yapıldı\n";
-        }             
-        String text = "************************************************\n" + " Mustashil Adı:\t" + data.UreticiAdi
+        }
+        String text = "*********************************************\n" + " Mustashil Adı:\t" + data.UreticiAdi
                 + "\n" + " Tarih/Saat:\t" + data.Tarih + "\n" + " Ağırlık:\t" + data.Agirlik + "\n" + " Fire:\t"
                 + data.Fire + "\n" + " Cüzdan No:\t" + data.CuzdanNo + " \n" + NakitBilgiler + "\n"
                 + "------------------------------------------------\n" + " Net Ağırlık:\t" + data.NetAgirlik + "\n"
-                + " Ödeme: " + data.Odeme + "\n" + OdemeYapildi +
-                "\n";
+                + " Ödeme: " + data.Odeme + "\n" + OdemeYapildi + "\n";
         return text;
     }
 
