@@ -174,8 +174,18 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
             ret += printer.drawTextEx( " Net Ağırlık:\t"+ alim.NetAgirlik + "\n" , 5,  ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
             ret += printer.drawTextEx(  " Ödeme: " + alim.Odeme + "\n" +  OdemeYapildi + "\n", 5, ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
         }
+        if(pData.GunSonuMu){
+            ret += printer.drawTextEx("**********************************\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("\t\t Gün Sonu Ağırlık Özeti \n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Brüt Ağırlık : " + pData.ToplamAlimKg.toString() +" KG" , 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Fire Ağırlık : " + pData.ToplamKesintiKg.toString()+" KG" , 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Net Ağırlık : " + pData.ToplamNetKg.toString()+" KG" +"\n\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        }
+
         ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 384, -1, "arial", 24,
                 0, 0, 0);
+
+       
 
         ret = printer.printPage(0);
 
