@@ -204,13 +204,13 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
             OdemeYapildi = data.NetTutar + " Ödeme yapıldı\n";
         }
         String text = "**************************************\n" +
-                     " Mustashil Adı:\t" + data.UreticiAdi+ "\n" + 
+                     " Mustahsil Adı:\t" + data.UreticiAdi+ "\n" + 
+                     " Cüzdan No:\t" + data.CuzdanNo + " \n"+
                      " Tarih/Saat:\t" + data.Tarih + "\n" + 
-                     " Ağırlık:\t" + data.Agirlik + "\n" + 
+                     " Brüt Ağırlık:\t" + data.Agirlik + "\n" + 
                      " Fire:\t"+ data.Fire + "\n" +
-                    " Cüzdan No:\t" + data.CuzdanNo + " \n"
-                     + NakitBilgiler + "\n"
-                + "------------------------------------------------\n" ;
+                      NakitBilgiler + "\n"+
+                     "------------------------------------------------\n" ;
         return text;
     }
 
