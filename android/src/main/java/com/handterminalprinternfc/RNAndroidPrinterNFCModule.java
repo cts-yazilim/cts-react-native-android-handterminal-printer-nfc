@@ -172,7 +172,25 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
 
             ret += printer.drawTextEx(GenerateUreticiBilgileri(alim), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
             ret += printer.drawTextEx( " Net Ağırlık:\t"+ alim.NetAgirlik + "\n" , 5,  ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
-            ret += printer.drawTextEx(  " Ödeme: " + alim.Odeme + "\n" +  OdemeYapildi + "\n", 5, ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
+
+            String OdemeText = "";
+            String[] arrText = alim.Odeme.split(" ");
+            int i = 0;
+            String msg = "";
+            for(i = 0 ; i < arrText.length ; i++)
+            {
+                if(msg.length()+arrText[i].length() <= 22)
+                {
+                    OdemeText += " "+ arrText[i];
+                    msg +=  " "+  arrText[i];
+                }
+                else	
+                {
+                    OdemeText += "\n" + arrText[i];
+                    msg = arrText[i];
+                }  
+            }
+            ret += printer.drawTextEx(  " Ödeme: " + OdemeText + "\n" +  OdemeYapildi + "\n", 5, ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
         }
         if(pData.GunSonuMu){
             ret += printer.drawTextEx("**********************************\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
