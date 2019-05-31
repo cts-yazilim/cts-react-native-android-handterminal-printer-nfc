@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 
 import android.util.Log;
 import android.device.PiccManager;
@@ -23,6 +25,15 @@ import java.util.Map;
 import java.util.HashMap;
 
 import com.google.gson.Gson;
+import java.util.Properties;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import javax.mail.*;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -54,7 +65,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     @ReactMethod
-    public void Test() {
+    public void Backup() {
         try {
 
             // String path = "/data/data/com.yascayalim/databases/";
@@ -63,7 +74,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
             // File[] files = directory.listFiles();
             // Log.d("DBFILE", "Size: " + files.length);
             // for (int i = 0; i < files.length; i++) {
-            //     Log.d("DBFILE", "FileName:" + files[i].getName());
+            // Log.d("DBFILE", "FileName:" + files[i].getName());
             // }
 
             final String inFileName = reactContext.getDatabasePath("dataDB").getPath();
@@ -94,6 +105,73 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
             Log.d("DBFILE", "DOSYA HATA" + ex.toString());
         }
 
+    }
+
+    @ReactMethod
+    public void BackupMail(String DeviceInfo) {
+        Log.d("DBFILE", "BAŞLADI");
+        Backup();
+        Log.d("DBFILE", "BİTTİ");
+        Log.d("DBFILE", "COMPRESS");
+
+        final String deviceInfo = DeviceInfo;
+        final SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+        final Date date = new Date(System.currentTimeMillis());
+        final String dbFile = Environment.getExternalStorageDirectory() + "/database_copy.db";
+        final String ZipFile = Environment.getExternalStorageDirectory() + "/" + DeviceInfo + "backup.zip";
+        CompressFile(dbFile, ZipFile);
+        Log.d("DBFILE", "COMPRESSFIN");
+
+        new Thread(new Runnable() {
+            @Override
+
+            public void run() {
+                try {
+
+                    Log.d("DBFILE", "MAIL SENDING");
+
+                    GMailSender sender = new GMailSender("desk@cts.com.tr", "Desk12?");
+                    sender.sendMail("ÇAY ALIM " + deviceInfo + " Kodlu Cihaz BACKUP",
+                            "Cay alim uygulamasinda " + deviceInfo + " kodlu cihazin" + formatter.format(date)
+                                    + " tarihli backup dosyasidir ",
+                            ZipFile,
+                            "desk@cts.com.tr",
+                            "selcuk.aksar@cts.com.tr,cem.elma@cts.com.tr,kadir.avci@cts.com.tr");
+                } catch (Exception e) {
+                    Log.e("SendMail", e.getMessage(), e);
+                }
+
+            }
+        }).start();
+
+    }
+
+    static final int BUFFER = 2048;
+
+    public void CompressFile(String file, String zipFileName) {
+        try {
+            BufferedInputStream origin = null;
+            FileOutputStream dest = new FileOutputStream(zipFileName);
+            ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(dest));
+            byte data[] = new byte[BUFFER];
+
+            Log.v("Compress", "Adding: " + file);
+            FileInputStream fi = new FileInputStream(file);
+            origin = new BufferedInputStream(fi, BUFFER);
+
+            ZipEntry entry = new ZipEntry(file.substring(file.lastIndexOf("/") + 1));
+            out.putNextEntry(entry);
+            int count;
+
+            while ((count = origin.read(data, 0, BUFFER)) != -1) {
+                out.write(data, 0, count);
+            }
+            origin.close();
+
+            out.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @ReactMethod
@@ -160,10 +238,16 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         if (Tekrar) {
             fisTekrarMsg = "\t\t\t\t\tFiş Tekrarı\n";
         }
-        int ret = printer.drawTextEx("\n\t\t\t\t\t\tOFÇAY\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
-        ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
-        ret += printer.drawTextEx(fisTekrarMsg, 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
-        ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+        int ret = 0;
+
+        if (pData.BaslikYaz) {
+            ret += printer.drawTextEx("\n\t\t\t\t\t\tOFÇAY\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
+            ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001,
+                    0);
+            ret += printer.drawTextEx(fisTekrarMsg, 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+        }
+
         for (Alim alim : pData.Alimlar) {
             String OdemeYapildi = "";
             if (alim.NakitAlim) {
@@ -171,40 +255,41 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
             }
 
             ret += printer.drawTextEx(GenerateUreticiBilgileri(alim), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
-            ret += printer.drawTextEx( " Net Ağırlık:\t"+ alim.NetAgirlik + "\n" , 5,  ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
+            ret += printer.drawTextEx(" Net Ağırlık:\t" + alim.NetAgirlik + "\n", 5, ret - 1, 384, -1, "arial", 24, 0,
+                    0x0001, 0);
 
             String OdemeText = "";
             String[] arrText = alim.Odeme.split(" ");
             int i = 0;
             String msg = "";
-            for(i = 0 ; i < arrText.length ; i++)
-            {
-                if(msg.length()+arrText[i].length() <= 22)
-                {
-                    OdemeText += " "+ arrText[i];
-                    msg +=  " "+  arrText[i];
-                }
-                else	
-                {
+            for (i = 0; i < arrText.length; i++) {
+                if (msg.length() + arrText[i].length() <= 22) {
+                    OdemeText += " " + arrText[i];
+                    msg += " " + arrText[i];
+                } else {
                     OdemeText += "\n" + arrText[i];
                     msg = arrText[i];
-                }  
+                }
             }
-            ret += printer.drawTextEx(  " Ödeme: " + OdemeText + "\n" +  OdemeYapildi + "\n", 5, ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
+            ret += printer.drawTextEx(" Ödeme: " + OdemeText + "\n" + OdemeYapildi + "\n", 5, ret - 1, 384, -1, "arial",
+                    24, 0, 0x0001, 0);
         }
-        if(pData.GunSonuMu){
-            ret += printer.drawTextEx("**********************************\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
-            ret += printer.drawTextEx("\t\t Gün Sonu Ağırlık Özeti \n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
-            ret += printer.drawTextEx("Toplam Brüt Ağırlık : " + pData.ToplamAlimKg.toString() +" KG" , 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
-            ret += printer.drawTextEx("Toplam Fire Ağırlık : " + pData.ToplamKesintiKg.toString()+" KG" , 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
-            ret += printer.drawTextEx("Toplam Net Ağırlık : " + pData.ToplamNetKg.toString()+" KG" +"\n\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        if (pData.GunSonuMu) {
+            ret += printer.drawTextEx("**********************************\n", 5, ret - 1, 384, -1, "arial", 25, 0,
+                    0x0001, 0);
+            ret += printer.drawTextEx("\t\t " + pData.VadeTanim + " Ağırlık Özeti \n", 5, ret - 1, 384, -1, "arial", 25,
+                    0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Brüt Ağırlık : " + pData.ToplamAlimKg.toString() + " KG", 5, ret - 1, 384,
+                    -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Fire Ağırlık : " + pData.ToplamKesintiKg.toString() + " KG", 5, ret - 1,
+                    384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Net Ağırlık : " + pData.ToplamNetKg.toString() + " KG" + "\n\n", 5,
+                    ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
         }
-
-        ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 384, -1, "arial", 24,
-                0, 0, 0);
-
-       
-
+        if (pData.ImzaYaz) {
+            ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 384, -1, "arial",
+                    24, 0, 0, 0);
+        }
         ret = printer.printPage(0);
 
         Intent i = new Intent("android.prnt.message");
@@ -215,10 +300,8 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
     }
 
     private String GenerateAliciBilgileri(PrinterData data) {
-        String text = "------------------------------------------------\n" + "\n" + 
-                      "  Eksper Adı:\t" + data.EksperAdi+ "\n" + 
-                      "  Alım Yeri:\t" + data.AlimYeriAdi + "\n" + 
-                      "  Fabrika:\t" + data.FabrikaAdi + "\n";
+        String text = "------------------------------------------------\n" + "\n" + "  Eksper Adı:\t" + data.EksperAdi
+                + "\n" + "  Alım Yeri:\t" + data.AlimYeriAdi + "\n" + "  Fabrika:\t" + data.FabrikaAdi + "\n";
 
         return text;
     }
@@ -231,14 +314,10 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
                     + " Net Tutar:\t" + data.NetTutar + " \n";
             OdemeYapildi = data.NetTutar + " Ödeme yapıldı\n";
         }
-        String text = "**************************************\n" +
-                     " Mustahsil Adı:\t" + data.UreticiAdi+ "\n" + 
-                     " Cüzdan No:\t" + data.CuzdanNo + " \n"+
-                     " Tarih/Saat:\t" + data.Tarih + "\n" + 
-                     " Brüt Ağırlık:\t" + data.Agirlik + "\n" + 
-                     " Fire:\t"+ data.Fire + "\n" +
-                      NakitBilgiler + "\n"+
-                     "------------------------------------------------\n" ;
+        String text = "**************************************\n" + " Mustahsil Adı:\t" + data.UreticiAdi + "\n"
+                + " Cüzdan No:\t" + data.CuzdanNo + " \n" + " Tarih/Saat:\t" + data.Tarih + "\n" + " Brüt Ağırlık:\t"
+                + data.Agirlik + "\n" + " Fire:\t" + data.Fire + "\n" + NakitBilgiler + "\n"
+                + "------------------------------------------------\n";
         return text;
     }
 
