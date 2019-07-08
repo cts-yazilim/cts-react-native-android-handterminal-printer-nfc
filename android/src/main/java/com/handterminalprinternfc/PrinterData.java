@@ -5,10 +5,6 @@ import java.util.List;
 
 public class PrinterData {
 
-	Boolean GunSonuMu = new Boolean(false);
-	Boolean BaslikYaz = new Boolean(true);
-	Boolean ImzaYaz = new Boolean (true);
-	
 	String FisBaslik = new String();
 	String VadeTanim = new String();
 	String EksperAdi= new String();
@@ -18,7 +14,8 @@ public class PrinterData {
 	Double ToplamKesintiKg = new Double(0);
 	Double ToplamNetKg= new Double(0);
 
-	List<Alim> Alimlar ;
+	Alim Alim  = new Alim(); 						// Normal Fis cikartma isleminde tek alim olarak bu degisken kullanilmaktadir.
+	List<VadeAlim> Vadeler ; // Gunsonu Aliminda liste olarak vadeler gruplanmis halde bu degiskene atanmaktadir.
 }
 
 

@@ -134,8 +134,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
                     sender.sendMail("ÇAY ALIM " + deviceInfo + " Kodlu Cihaz BACKUP",
                             "Cay alim uygulamasinda " + deviceInfo + " kodlu cihazin" + formatter.format(date)
                                     + " tarihli backup dosyasidir ",
-                            ZipFile,
-                            "desk@cts.com.tr",
+                            ZipFile, "desk@cts.com.tr",
                             "selcuk.aksar@cts.com.tr,cem.elma@cts.com.tr,kadir.avci@cts.com.tr");
                 } catch (Exception e) {
                     Log.e("SendMail", e.getMessage(), e);
@@ -195,10 +194,14 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void PrintMsg(String data, Boolean Tekrar) {
-        PrintText(data, Tekrar);
+    public void PrintFis(String data, Boolean Tekrar) {
+        FisYazdir(data, Tekrar);
     }
 
+    @ReactMethod
+    public void PrintGunSonuFis(String data) {
+        GunSonuFisYazdir(data);
+    }
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@React
     // METHOD@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -227,75 +230,170 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         }
     };
 
-    public void PrintText(String data, Boolean Tekrar) {
+    public void FisYazdir(String data, Boolean Tekrar) {
         Gson gson = new Gson();
         PrinterData pData = gson.fromJson(data, PrinterData.class);
-
+        Alim alim = pData.Alim;
         PrinterManager printer = new PrinterManager();
 
         printer.setupPage(384, -1);
+        int ret = 0;
         String fisTekrarMsg = "";
+
+        // Baslik
         if (Tekrar) {
             fisTekrarMsg = "\t\t\t\t\tFiş Tekrarı\n";
         }
-        int ret = 0;
+        ret += printer.drawTextEx("\n\t\t\t\t\t\tOFÇAY\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
+        ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx(fisTekrarMsg, 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+        // Baslik Bitis
 
-        if (pData.BaslikYaz) {
-            ret += printer.drawTextEx("\n\t\t\t\t\t\tOFÇAY\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
-            ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001,
-                    0);
-            ret += printer.drawTextEx(fisTekrarMsg, 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
-            ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+        // Uretici Alim
+        String OdemeYapildi = "";
+        if (alim.NakitAlim) {
+            OdemeYapildi = alim.NetTutar + " Ödeme yapıldı\n";
         }
 
-        for (Alim alim : pData.Alimlar) {
-            String OdemeYapildi = "";
-            if (alim.NakitAlim) {
-                OdemeYapildi = alim.NetTutar + " Ödeme yapıldı\n";
+        ret += printer.drawTextEx(GenerateUreticiBilgileri(alim), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+        ret += printer.drawTextEx(" Net Ağırlık:\t" + alim.NetAgirlik + "\n", 5, ret - 1, 384, -1, "arial", 24, 0,
+                0x0001, 0);
+
+        String OdemeText = "";
+        String[] arrText = alim.Odeme.split(" ");
+        int i = 0;
+        String msg = "";
+        for (i = 0; i < arrText.length; i++) {
+            if (msg.length() + arrText[i].length() <= 22) {
+                OdemeText += " " + arrText[i];
+                msg += " " + arrText[i];
+            } else {
+                OdemeText += "\n" + arrText[i];
+                msg = arrText[i];
             }
+        }
+        ret += printer.drawTextEx(" Ödeme: " + OdemeText + "\n" + OdemeYapildi + "\n", 5, ret - 1, 384, -1, "arial", 24,
+                0, 0x0001, 0);
 
-            ret += printer.drawTextEx(GenerateUreticiBilgileri(alim), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
-            ret += printer.drawTextEx(" Net Ağırlık:\t" + alim.NetAgirlik + "\n", 5, ret - 1, 384, -1, "arial", 24, 0,
-                    0x0001, 0);
+        ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 384, -1, "arial", 24,
+                0, 0, 0);
+        // Uretici Alim Bitis
+        ret = printer.printPage(0);
 
+        // if (pData.GunSonuMu) {
+        // ret += printer.drawTextEx("**********************************\n", 5, ret - 1,
+        // 384, -1, "arial", 25, 0,
+        // 0x0001, 0);
+        // ret += printer.drawTextEx("\t\t " + pData.VadeTanim + " Ağırlık Özeti \n", 5,
+        // ret - 1, 384, -1, "arial", 25,
+        // 0, 0x0001, 0);
+        // ret += printer.drawTextEx("Toplam Brüt Ağırlık : " +
+        // pData.ToplamAlimKg.toString() + " KG", 5, ret - 1, 384,
+        // -1, "arial", 25, 0, 0x0001, 0);
+        // ret += printer.drawTextEx("Toplam Fire Ağırlık : " +
+        // pData.ToplamKesintiKg.toString() + " KG", 5, ret - 1,
+        // 384, -1, "arial", 25, 0, 0x0001, 0);
+        // ret += printer.drawTextEx("Toplam Net Ağırlık : " +
+        // pData.ToplamNetKg.toString() + " KG" + "\n\n", 5,
+        // ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        // }
+
+        Intent myIntent = new Intent("android.prnt.message");
+        myIntent.putExtra("ret", ret);
+
+        reactContext.sendBroadcast(myIntent);
+
+    }
+
+    public void GunSonuFisYazdir(String data) {
+        Gson gson = new Gson();
+        PrinterData pData = gson.fromJson(data, PrinterData.class);
+        PrinterManager printer = new PrinterManager();
+
+        printer.setupPage(384, -1);
+        int ret = 0;
+
+        // Baslik
+
+        ret += printer.drawTextEx("\n\t\t\t\t\t\tOFÇAY\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
+        ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+        // Baslik Bitis
+
+        // Uretici Alim
+
+        // Vade grubu ile donme
+        for (VadeAlim vadeAlim : pData.Vadeler) {
+
+            /* Vade Baslik Ayarlanmasi */
             String OdemeText = "";
-            String[] arrText = alim.Odeme.split(" ");
+            String[] arrText = vadeAlim.VadeFiyatAciklama.split(" ");
             int i = 0;
             String msg = "";
             for (i = 0; i < arrText.length; i++) {
-                if (msg.length() + arrText[i].length() <= 22) {
-                    OdemeText += " " + arrText[i];
-                    msg += " " + arrText[i];
+               
+                if (msg.length() + arrText[i].length() <= 24) {
+                    OdemeText += " " + arrText[i].replaceAll("\\W", ""); ;
+                    msg += " " + arrText[i].replaceAll("\\W", ""); ;
                 } else {
-                    OdemeText += "\n" + arrText[i];
-                    msg = arrText[i];
+                    OdemeText += "\n" + arrText[i].replaceAll("\\W", ""); ;
+                    msg = arrText[i].replaceAll("\\W", ""); ;
                 }
             }
-            ret += printer.drawTextEx(" Ödeme: " + OdemeText + "\n" + OdemeYapildi + "\n", 5, ret - 1, 384, -1, "arial",
-                    24, 0, 0x0001, 0);
-        }
-        if (pData.GunSonuMu) {
+            Log.w("ODEMETEXT", OdemeText);
+
+            ret += printer.drawTextEx("** "+ OdemeText +" **\n", 5, ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
+
+            /* Vade Baslik Ayarlanmasi */
+
+            /* Ayni Vadedeki Alimlarin Yazilmasi */
+            for (Alim alim : vadeAlim.Alimlar) {
+
+                ret += printer.drawTextEx(GenerateUreticiBilgileri(alim), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+                ret += printer.drawTextEx(" Net Ağırlık:\t" + alim.NetAgirlik + "\n", 5, ret - 1, 384, -1, "arial", 24,
+                        0, 0x0001, 0);
+
+            }
+            /* Ayni Vadedeki Alimlarin Yazilmasi */
+
+            /* Vade Toplam Ozetleri */
             ret += printer.drawTextEx("**********************************\n", 5, ret - 1, 384, -1, "arial", 25, 0,
                     0x0001, 0);
-            ret += printer.drawTextEx("\t\t " + pData.VadeTanim + " Ağırlık Özeti \n", 5, ret - 1, 384, -1, "arial", 25,
-                    0, 0x0001, 0);
-            ret += printer.drawTextEx("Toplam Brüt Ağırlık : " + pData.ToplamAlimKg.toString() + " KG", 5, ret - 1, 384,
-                    -1, "arial", 25, 0, 0x0001, 0);
-            ret += printer.drawTextEx("Toplam Fire Ağırlık : " + pData.ToplamKesintiKg.toString() + " KG", 5, ret - 1,
+            ret += printer.drawTextEx("\t\t " + vadeAlim.VadeTanim + " Ağırlık Özeti \n", 5, ret - 1, 384, -1, "arial",
+                    25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Brüt Ağırlık : " + vadeAlim.ToplamAlimKg.toString() + " KG", 5, ret - 1,
                     384, -1, "arial", 25, 0, 0x0001, 0);
-            ret += printer.drawTextEx("Toplam Net Ağırlık : " + pData.ToplamNetKg.toString() + " KG" + "\n\n", 5,
+            ret += printer.drawTextEx("Toplam Fire Ağırlık : " + vadeAlim.ToplamKesintiKg.toString() + " KG", 5,
                     ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Net Ağırlık : " + vadeAlim.ToplamNetKg.toString() + " KG" + "\n\n", 5,
+                    ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("-----------------------------------------\n", 5,
+                    ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+            /* Vade Toplam Ozetleri */
+
         }
-        if (pData.ImzaYaz) {
-            ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 384, -1, "arial",
-                    24, 0, 0, 0);
-        }
+
+        /* Genel Toplam Ozetleri */
+        ret += printer.drawTextEx("#######################\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx("\t TOPLAM AĞIRLIK ÖZETİ \n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx("Toplam Brüt Ağırlık : " + pData.ToplamAlimKg.toString() + " KG", 5, ret - 1, 384, -1,
+                "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx("Toplam Fire Ağırlık : " + pData.ToplamKesintiKg.toString() + " KG", 5, ret - 1, 384,
+                -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx("Toplam Net Ağırlık : " + pData.ToplamNetKg.toString() + " KG" + "\n\n", 5, ret - 1,
+                384, -1, "arial", 25, 0, 0x0001, 0);
+
+        /* Genel Toplam Ozetleri */
+        ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 384, -1, "arial", 24,
+                0, 0, 0);
+        // Uretici Alim Bitis
         ret = printer.printPage(0);
 
-        Intent i = new Intent("android.prnt.message");
-        i.putExtra("ret", ret);
+        Intent myIntent = new Intent("android.prnt.message");
+        myIntent.putExtra("ret", ret);
 
-        reactContext.sendBroadcast(i);
+        reactContext.sendBroadcast(myIntent);
 
     }
 
@@ -316,8 +414,8 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         }
         String text = "**************************************\n" + " Mustahsil Adı:\t" + data.UreticiAdi + "\n"
                 + " Cüzdan No:\t" + data.CuzdanNo + " \n" + " Tarih/Saat:\t" + data.Tarih + "\n" + " Brüt Ağırlık:\t"
-                + data.Agirlik + "\n" + " Fire:\t" + data.Fire + "\n" + NakitBilgiler + "\n"
-                + "------------------------------------------------\n";
+                + data.Agirlik + "\n" + " Fire:\t" + data.Fire + "\n" + NakitBilgiler
+                + "------------------------------------------------";
         return text;
     }
 
