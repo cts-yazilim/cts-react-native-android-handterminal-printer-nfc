@@ -341,7 +341,6 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
                     msg = arrText[i].replaceAll("\\W", ""); ;
                 }
             }
-            Log.w("ODEMETEXT", OdemeText);
 
             ret += printer.drawTextEx("** "+ OdemeText +" **\n", 5, ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
 
