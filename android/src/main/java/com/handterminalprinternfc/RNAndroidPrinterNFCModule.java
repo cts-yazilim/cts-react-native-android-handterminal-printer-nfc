@@ -135,7 +135,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
                             "Cay alim uygulamasinda " + deviceInfo + " kodlu cihazin" + formatter.format(date)
                                     + " tarihli backup dosyasidir ",
                             ZipFile, "desk@cts.com.tr",
-                            "selcuk.aksar@cts.com.tr,cem.elma@cts.com.tr,kadir.avci@cts.com.tr");
+                            "merve.yapnaz@cts.com.tr");
                 } catch (Exception e) {
                     Log.e("SendMail", e.getMessage(), e);
                 }
@@ -194,13 +194,13 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void PrintFis(String data, Boolean Tekrar) {
-        FisYazdir(data, Tekrar);
+    public void PrintFis(String data, Boolean Tekrar, String Sirket) {
+        FisYazdir(data, Tekrar,Sirket);
     }
 
     @ReactMethod
-    public void PrintGunSonuFis(String data) {
-        GunSonuFisYazdir(data);
+    public void PrintGunSonuFis(String data, String Sirket) {
+        GunSonuFisYazdir(data,Sirket);
     }
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@React
     // METHOD@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -230,7 +230,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         }
     };
 
-    public void FisYazdir(String data, Boolean Tekrar) {
+    public void FisYazdir(String data, Boolean Tekrar, String Sirket) {
         Gson gson = new Gson();
         PrinterData pData = gson.fromJson(data, PrinterData.class);
         Alim alim = pData.Alim;
@@ -244,7 +244,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         if (Tekrar) {
             fisTekrarMsg = "\t\t\t\t\tFiş Tekrarı\n";
         }
-        ret += printer.drawTextEx("\n\t\t\t\t\t\tOFÇAY\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
+        ret += printer.drawTextEx(Sirket +"\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
         ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
         ret += printer.drawTextEx(fisTekrarMsg, 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
         ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
@@ -306,7 +306,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
 
     }
 
-    public void GunSonuFisYazdir(String data) {
+    public void GunSonuFisYazdir(String data, String Sirket) {
         Gson gson = new Gson();
         PrinterData pData = gson.fromJson(data, PrinterData.class);
         PrinterManager printer = new PrinterManager();
@@ -315,8 +315,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         int ret = 0;
 
         // Baslik
-
-        ret += printer.drawTextEx("\n\t\t\t\t\t\tOFÇAY\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
+        ret += printer.drawTextEx( Sirket +"\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
         ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
         ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
         // Baslik Bitis
@@ -395,7 +394,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         reactContext.sendBroadcast(myIntent);
 
     }
-
+    
     private String GenerateAliciBilgileri(PrinterData data) {
         String text = "------------------------------------------------\n" + "\n" + "  Eksper Adı:\t" + data.EksperAdi
                 + "\n" + "  Alım Yeri:\t" + data.AlimYeriAdi + "\n" + "  Fabrika:\t" + data.FabrikaAdi + "\n";
