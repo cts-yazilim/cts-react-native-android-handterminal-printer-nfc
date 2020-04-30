@@ -135,7 +135,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
                             "Cay alim uygulamasinda " + deviceInfo + " kodlu cihazin" + formatter.format(date)
                                     + " tarihli backup dosyasidir ",
                             ZipFile, "desk@cts.com.tr",
-                            "merve.yapnaz@cts.com.tr");
+                            "selcuk.aksar@cts.com.tr,cem.elma@cts.com.tr,kadir.avci@cts.com.tr");
                 } catch (Exception e) {
                     Log.e("SendMail", e.getMessage(), e);
                 }
