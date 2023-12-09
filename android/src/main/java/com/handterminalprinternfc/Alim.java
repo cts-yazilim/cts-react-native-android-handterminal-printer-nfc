@@ -1,4 +1,5 @@
 package com.handterminalprinternfc;
+import java.util.List;
 
 
 public class Alim {
@@ -14,5 +15,8 @@ public class Alim {
 	String KesintiTutar = new String();
 	String NetTutar = new String();
 	String Odeme = new String();
+	List<AlimDetay> Detaylar ;
+	List<AlimKesintiAltToplam> FireKesintiAltToplamlar;
+	List<AlimKesintiAltToplam> TutarKesintiAltToplamlar;
 	
 }

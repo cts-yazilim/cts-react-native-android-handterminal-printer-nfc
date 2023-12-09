@@ -43,6 +43,7 @@ import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+import java.util.List;
 
 public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
 
@@ -185,6 +186,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void NfcManagerOku() {
+
         CheckPicc();
     }
 
@@ -194,16 +196,45 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void PrintFis(String data, Boolean Tekrar, String Sirket) {
-        FisYazdir(data, Tekrar,Sirket);
+    public void PrintFis(String data, Boolean Tekrar, String Sirket, String Versiyon) {
+        // TestFis(data);
+        if (Versiyon.equals("V1")) {
+            FisYazdir(data, Tekrar, Sirket);
+        } else {
+            FisYazdirV2(data, Tekrar, Sirket);
+        }
     }
 
     @ReactMethod
-    public void PrintGunSonuFis(String data, String Sirket) {
-        GunSonuFisYazdir(data,Sirket);
+    public void PrintGunSonuFis(String data, String Sirket, String Versiyon) {
+        if (Versiyon.equals("V1")) {
+            GunSonuFisYazdir(data, Sirket);
+        } else {
+            GunSonuFisYazdirV2(data, Sirket);
+        }
     }
-    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@React
-    // METHOD@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    @ReactMethod
+    public void PrintDetayFis(String data, String Sirket) {
+        DetayliFisYazdir(data, Sirket);
+    }
+
+    @ReactMethod
+    public void TestFis(String data) {
+
+        PrinterManager printer = new PrinterManager();
+
+        printer.setupPage(384, -1);
+        int ret = 0;
+        ret += printer.drawTextEx(data, 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+        ret = printer.printPage(0);
+
+        Intent myIntent = new Intent("android.prnt.message");
+        myIntent.putExtra("ret", ret);
+
+        reactContext.sendBroadcast(myIntent);
+
+    }
 
     // @@@@@@@@@@ PRINTER @@@@@@@@@@@@@@@@@@@@@@
 
@@ -230,6 +261,90 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         }
     };
 
+    public void DetayliFisYazdir(String data, String Sirket) {
+        Gson gson = new Gson();
+        PrinterData pData = gson.fromJson(data, PrinterData.class);
+        Alim alim = pData.Alim;
+        PrinterManager printer = new PrinterManager();
+
+        printer.setupPage(384, -1);
+        int ret = 0;
+        String fisTekrarMsg = "";
+
+        ret += printer.drawTextEx(Sirket, 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
+        ret += printer.drawTextEx(pData.FisBaslik, 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx(GenerateAliciBilgileriV2(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+        // Baslik Bitis
+
+        // Uretici Alim
+        String OdemeYapildi = "";
+        if (alim.NakitAlim) {
+            OdemeYapildi = alim.NetTutar + " ÖDEME YAPILDI\n";
+        }
+
+        ret += printer.drawTextEx(GenerateUreticiBilgileriDetayli(alim), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+
+        ret += printer.drawTextEx("Brüt Ağırlık    :" + alim.Agirlik, 5, ret - 1, 384, -1, "arial", 26, 0,
+                0x0001, 0);
+        ret += printer.drawTextEx("Fire Ağırlık    :" + alim.Fire, 5, ret - 1, 384, -1, "arial", 26, 0,
+                0x0001, 0);
+        ret += printer.drawTextEx("Net Ağırlık    :" + alim.NetAgirlik + "\n", 5, ret - 1, 384, -1, "arial", 26, 0,
+                0x0001, 0);
+        if (alim.NakitAlim) {
+            ret += printer.drawTextEx("Brüt Tutar    :" + alim.Tutar, 5, ret - 1, 384, -1, "arial", 26, 0,
+                    0x0001, 0);
+            ret += printer.drawTextEx("Kesinti Tutar    :" + alim.KesintiTutar, 5, ret - 1, 384, -1, "arial", 26, 0,
+                    0x0001, 0);
+            ret += printer.drawTextEx("Net Tutar    :" + alim.NetTutar + "\n", 5, ret - 1, 384, -1, "arial", 26, 0,
+                    0x0001, 0);
+        }
+
+        String OdemeText = "";
+        String[] arrText = alim.Odeme.split(" ");
+        int i = 0;
+        String msg = "";
+        for (i = 0; i < arrText.length; i++) {
+            if (msg.length() + arrText[i].length() <= 22) {
+                OdemeText += " " + arrText[i];
+                msg += " " + arrText[i];
+            } else {
+                OdemeText += "\n" + arrText[i];
+                msg = arrText[i];
+            }
+        }
+        ret += printer.drawTextEx("Ödeme   : " + OdemeText + "\n" + OdemeYapildi, 5, ret - 1, 384, -1, "arial", 26, 0,
+                0x0001, 0);
+
+        ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 384, -1, "arial", 24,
+                0, 0, 0);
+        // Uretici Alim Bitis
+        ret = printer.printPage(0);
+
+        // if (pData.GunSonuMu) {
+        // ret += printer.drawTextEx("**********************************\n", 5, ret - 1,
+        // 384, -1, "arial", 25, 0,
+        // 0x0001, 0);
+        // ret += printer.drawTextEx("\t\t " + pData.VadeTanim + " Ağırlık Özeti \n", 5,
+        // ret - 1, 384, -1, "arial", 25,
+        // 0, 0x0001, 0);
+        // ret += printer.drawTextEx("Toplam Brüt Ağırlık : " +
+        // pData.ToplamAlimKg.toString() + " KG", 5, ret - 1, 384,
+        // -1, "arial", 25, 0, 0x0001, 0);
+        // ret += printer.drawTextEx("Toplam Fire Ağırlık : " +
+        // pData.ToplamKesintiKg.toString() + " KG", 5, ret - 1,
+        // 384, -1, "arial", 25, 0, 0x0001, 0);
+        // ret += printer.drawTextEx("Toplam Net Ağırlık : " +
+        // pData.ToplamNetKg.toString() + " KG" + "\n\n", 5,
+        // ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        // }
+
+        Intent myIntent = new Intent("android.prnt.message");
+        myIntent.putExtra("ret", ret);
+
+        reactContext.sendBroadcast(myIntent);
+
+    }
+
     public void FisYazdir(String data, Boolean Tekrar, String Sirket) {
         Gson gson = new Gson();
         PrinterData pData = gson.fromJson(data, PrinterData.class);
@@ -244,7 +359,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         if (Tekrar) {
             fisTekrarMsg = "\t\t\t\t\tFiş Tekrarı\n";
         }
-        ret += printer.drawTextEx(Sirket +"\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
+        ret += printer.drawTextEx(Sirket + "\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
         ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
         ret += printer.drawTextEx(fisTekrarMsg, 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
         ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
@@ -273,8 +388,84 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
                 msg = arrText[i];
             }
         }
-        ret += printer.drawTextEx(" Ödeme: " + OdemeText + "\n" + OdemeYapildi + "\n", 5, ret - 1, 384, -1, "arial", 24,
-                0, 0x0001, 0);
+        ret += printer.drawTextEx(" ÖDEME: " + OdemeText + "\n" + OdemeYapildi, 5, ret - 1, 384, -1, "arial", 24, 0,
+                0x0001, 0);
+
+        ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 384, -1, "arial", 24,
+                0, 0, 0);
+        // Uretici Alim Bitis
+        ret = printer.printPage(0);
+
+        // if (pData.GunSonuMu) {
+        // ret += printer.drawTextEx("**********************************\n", 5, ret - 1,
+        // 384, -1, "arial", 25, 0,
+        // 0x0001, 0);
+        // ret += printer.drawTextEx("\t\t " + pData.VadeTanim + " Ağırlık Özeti \n", 5,
+        // ret - 1, 384, -1, "arial", 25,
+        // 0, 0x0001, 0);
+        // ret += printer.drawTextEx("Toplam Brüt Ağırlık : " +
+        // pData.ToplamAlimKg.toString() + " KG", 5, ret - 1, 384,
+        // -1, "arial", 25, 0, 0x0001, 0);
+        // ret += printer.drawTextEx("Toplam Fire Ağırlık : " +
+        // pData.ToplamKesintiKg.toString() + " KG", 5, ret - 1,
+        // 384, -1, "arial", 25, 0, 0x0001, 0);
+        // ret += printer.drawTextEx("Toplam Net Ağırlık : " +
+        // pData.ToplamNetKg.toString() + " KG" + "\n\n", 5,
+        // ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        // }
+
+        Intent myIntent = new Intent("android.prnt.message");
+        myIntent.putExtra("ret", ret);
+
+        reactContext.sendBroadcast(myIntent);
+
+    }
+
+    public void FisYazdirV2(String data, Boolean Tekrar, String Sirket) {
+        Gson gson = new Gson();
+        PrinterData pData = gson.fromJson(data, PrinterData.class);
+        Alim alim = pData.Alim;
+        PrinterManager printer = new PrinterManager();
+
+        printer.setupPage(384, -1);
+        int ret = 0;
+        String fisTekrarMsg = "";
+
+        // Baslik
+        if (Tekrar) {
+            fisTekrarMsg = "\t\t\t\t\tFİŞ TEKRARI";
+        }
+        ret += printer.drawTextEx(Sirket, 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
+        ret += printer.drawTextEx(pData.FisBaslik, 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx(fisTekrarMsg, 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx(GenerateAliciBilgileriV2(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+        // Baslik Bitis
+
+        // Uretici Alim
+        String OdemeYapildi = "";
+        if (alim.NakitAlim) {
+            OdemeYapildi = alim.NetTutar + " ÖDEME YAPILDI\n";
+        }
+
+        ret += printer.drawTextEx(GenerateUreticiBilgileriV2(alim), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+        ret += printer.drawTextEx("Net Ağırlık    :" + alim.NetAgirlik + "\n", 5, ret - 1, 384, -1, "arial", 26, 0,
+                0x0001, 0);
+
+        String OdemeText = "";
+        String[] arrText = alim.Odeme.split(" ");
+        int i = 0;
+        String msg = "";
+        for (i = 0; i < arrText.length; i++) {
+            if (msg.length() + arrText[i].length() <= 22) {
+                OdemeText += " " + arrText[i];
+                msg += " " + arrText[i];
+            } else {
+                OdemeText += "\n" + arrText[i];
+                msg = arrText[i];
+            }
+        }
+        ret += printer.drawTextEx("Ödeme   : " + OdemeText + "\n" + OdemeYapildi, 5, ret - 1, 384, -1, "arial", 26, 0,
+                0x0001, 0);
 
         ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 384, -1, "arial", 24,
                 0, 0, 0);
@@ -315,7 +506,7 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         int ret = 0;
 
         // Baslik
-        ret += printer.drawTextEx( Sirket +"\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
+        ret += printer.drawTextEx(Sirket + "\n", 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
         ret += printer.drawTextEx("\t\t\t\t" + pData.FisBaslik + "\n", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
         ret += printer.drawTextEx(GenerateAliciBilgileri(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
         // Baslik Bitis
@@ -331,17 +522,21 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
             int i = 0;
             String msg = "";
             for (i = 0; i < arrText.length; i++) {
-               
+
                 if (msg.length() + arrText[i].length() <= 24) {
-                    OdemeText += " " + arrText[i].replaceAll("\\W", ""); ;
-                    msg += " " + arrText[i].replaceAll("\\W", ""); ;
+                    OdemeText += " " + arrText[i].replaceAll("\\W", "");
+                    ;
+                    msg += " " + arrText[i].replaceAll("\\W", "");
+                    ;
                 } else {
-                    OdemeText += "\n" + arrText[i].replaceAll("\\W", ""); ;
-                    msg = arrText[i].replaceAll("\\W", ""); ;
+                    OdemeText += "\n" + arrText[i].replaceAll("\\W", "");
+                    ;
+                    msg = arrText[i].replaceAll("\\W", "");
+                    ;
                 }
             }
 
-            ret += printer.drawTextEx("** "+ OdemeText +" **\n", 5, ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
+            ret += printer.drawTextEx("** " + OdemeText + " **\n", 5, ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
 
             /* Vade Baslik Ayarlanmasi */
 
@@ -366,8 +561,8 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
                     ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
             ret += printer.drawTextEx("Toplam Net Ağırlık : " + vadeAlim.ToplamNetKg.toString() + " KG" + "\n\n", 5,
                     ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
-            ret += printer.drawTextEx("-----------------------------------------\n", 5,
-                    ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("-----------------------------------------\n", 5, ret - 1, 384, -1, "arial", 25,
+                    0, 0x0001, 0);
             /* Vade Toplam Ozetleri */
 
         }
@@ -394,11 +589,121 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         reactContext.sendBroadcast(myIntent);
 
     }
-    
+
+    public void GunSonuFisYazdirV2(String data, String Sirket) {
+        Gson gson = new Gson();
+        PrinterData pData = gson.fromJson(data, PrinterData.class);
+        PrinterManager printer = new PrinterManager();
+        int FisSayisi = 0;
+        printer.setupPage(384, -1);
+        int ret = 0;
+
+        // Baslik
+        ret += printer.drawTextEx(Sirket, 5, 0, 384, -1, "arial", 26, 0, 0x0001, 0);
+        ret += printer.drawTextEx(pData.FisBaslik, 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx(GenerateAliciBilgileriForGunSonu(pData), 5, ret - 1, 384, -1, "arial", 24, 0, 0, 0);
+        // Baslik Bitis
+
+        // Uretici Alim
+
+        // Vade grubu ile donme
+        for (VadeAlim vadeAlim : pData.Vadeler) {
+
+            /* Vade Baslik Ayarlanmasi */
+            String OdemeText = "";
+            String[] arrText = vadeAlim.VadeFiyatAciklama.split(" ");
+            int i = 0;
+            String msg = "";
+            for (i = 0; i < arrText.length; i++) {
+
+                if (msg.length() + arrText[i].length() <= 24) {
+                    OdemeText += " " + arrText[i].replaceAll("\\W", "");
+                    ;
+                    msg += " " + arrText[i].replaceAll("\\W", "");
+                    ;
+                } else {
+                    OdemeText += "\n" + arrText[i].replaceAll("\\W", "");
+                    ;
+                    msg = arrText[i].replaceAll("\\W", "");
+                    ;
+                }
+            }
+
+            ret += printer.drawTextEx("** " + OdemeText + " **", 5, ret - 1, 384, -1, "arial", 24, 0, 0x0001, 0);
+
+            /* Vade Baslik Ayarlanmasi */
+
+            /* Ayni Vadedeki Alimlarin Yazilmasi */
+            for (Alim alim : vadeAlim.Alimlar) {
+
+                ret += printer.drawTextEx(GenerateUreticiBilgileriForGunSonu(alim), 5, ret - 1, 384, -1, "arial", 24, 0,
+                        0, 0);
+
+            }
+            /* Ayni Vadedeki Alimlarin Yazilmasi */
+
+            /* Vade Toplam Ozetleri */
+            ret += printer.drawTextEx("**********************************", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001,
+                    0);
+            ret += printer.drawTextEx("\t\t " + vadeAlim.VadeTanim + " Ağırlık Özeti", 5, ret - 1, 384, -1, "arial", 25,
+                    0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Brüt Ağırlık : " + vadeAlim.ToplamAlimKg.toString() + " KG", 5, ret - 1,
+                    384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Fire Ağırlık : " + vadeAlim.ToplamKesintiKg.toString() + " KG", 5,
+                    ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Net Ağırlık : " + vadeAlim.ToplamNetKg.toString() + " KG", 5, ret - 1,
+                    384, -1, "arial", 25, 0, 0x0001, 0);
+            ret += printer.drawTextEx("Toplam Fiş  :" + vadeAlim.Alimlar.size() + " Adet", 5, ret - 1, 384, -1, "arial",
+                    25, 0, 0x0001, 0);
+
+            ret += printer.drawTextEx("-----------------------------------------", 5, ret - 1, 384, -1, "arial", 25, 0,
+                    0x0001, 0);
+            /* Vade Toplam Ozetleri */
+            FisSayisi = FisSayisi + vadeAlim.Alimlar.size();
+        }
+
+        /* Genel Toplam Ozetleri */
+        ret += printer.drawTextEx("#######################", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx("\t TOPLAM AĞIRLIK ÖZETİ", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx("Toplam Brüt Ağırlık : " + pData.ToplamAlimKg.toString() + " KG", 5, ret - 1, 384, -1,
+                "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx("Toplam Fire Ağırlık : " + pData.ToplamKesintiKg.toString() + " KG", 5, ret - 1, 384,
+                -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx("Toplam Net Ağırlık : " + pData.ToplamNetKg.toString() + " KG" + "", 5, ret - 1, 384,
+                -1, "arial", 25, 0, 0x0001, 0);
+        ret += printer.drawTextEx("Toplam Fiş  :" + FisSayisi + " Adet", 5, ret - 1, 384, -1, "arial", 25, 0, 0x0001,
+                0);
+
+        /* Genel Toplam Ozetleri */
+        ret += printer.drawTextEx(" İmza :" + "______________________" + "\n\n\n\n\n", 5, ret - 1, 384, -1, "arial", 24,
+                0, 0, 0);
+        // Uretici Alim Bitis
+        ret = printer.printPage(0);
+
+        Intent myIntent = new Intent("android.prnt.message");
+        myIntent.putExtra("ret", ret);
+
+        reactContext.sendBroadcast(myIntent);
+
+    }
+
     private String GenerateAliciBilgileri(PrinterData data) {
         String text = "------------------------------------------------\n" + "\n" + "  Eksper Adı:\t" + data.EksperAdi
                 + "\n" + "  Alım Yeri:\t" + data.AlimYeriAdi + "\n" + "  Fabrika:\t" + data.FabrikaAdi + "\n";
 
+        return text;
+    }
+
+    private String GenerateAliciBilgileriV2(PrinterData data) {
+        String text = "------------------------------------------------\n" + "Tarih/Saat    :" + data.Alim.Tarih + "\n"
+                + "Fabrika          :" + data.FabrikaAdi + "\n" + "Alım Yeri       :" + data.AlimYeriAdi + "\n"
+                + "Eksper Adı    :" + data.EksperAdi + "";
+        return text;
+    }
+
+    private String GenerateAliciBilgileriForGunSonu(PrinterData data) {
+        String text = "------------------------------------------------\n" + "Fabrika          :" + data.FabrikaAdi
+                + "\n" + "Alım Yeri       :" + data.AlimYeriAdi + "\n" + "Eksper Adı    :" + data.EksperAdi + "\n";
         return text;
     }
 
@@ -414,6 +719,94 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
                 + " Cüzdan No:\t" + data.CuzdanNo + " \n" + " Tarih/Saat:\t" + data.Tarih + "\n" + " Brüt Ağırlık:\t"
                 + data.Agirlik + "\n" + " Fire:\t" + data.Fire + "\n" + NakitBilgiler
                 + "------------------------------------------------";
+        return text;
+    }
+
+    private String GenerateUreticiBilgileriV2(Alim data) {
+        String NakitBilgiler = "";
+        String OdemeYapildi = "";
+        if (data.NakitAlim) {
+            NakitBilgiler = "Tutar             :" + data.Tutar + "\n" + "Kesinti Tutar:" + data.KesintiTutar + "\n"
+                    + GenerateKesintiAltToplamlar(data.TutarKesintiAltToplamlar, 2) + "Net Tutar      :" + data.NetTutar
+                    + " \n";
+            OdemeYapildi = data.NetTutar + " Ödeme yapıldı\n";
+        }
+        String text = "**************************************\n" + "Mustahsil      :" + data.UreticiAdi + "\n"
+                + "Cüzdan No    :" + data.CuzdanNo + "\n" + "Brüt Ağırlık   :" + data.Agirlik + "\n"
+                + "Fire                :" + data.Fire + "\n"
+                + GenerateKesintiAltToplamlar(data.FireKesintiAltToplamlar, 1) + NakitBilgiler
+                + "------------------------------------------------";
+        return text;
+    }
+
+    private String GenerateUreticiBilgileriDetayli(Alim data) {
+
+        String text = "**************************************\n";
+        text += "Mustahsil      :" + data.UreticiAdi + "\n";
+        text += "Cüzdan No    :" + data.CuzdanNo + "\n";
+        text += "------------------------------------------------";
+        int CekiNo = 1;
+        for (AlimDetay item : data.Detaylar) {
+
+            text += GenerateCekiBilgileri(item, CekiNo, data.NakitAlim);
+            CekiNo++;
+        }
+
+        return text;
+    }
+
+    private String GenerateCekiBilgileri(AlimDetay data, int CekiNo, Boolean NakitAlim) {
+
+        String text = "\n        *********TARTIM - " + CekiNo + "*********\n";
+        text += "Brüt Ağırlık    :" + data.Agirlik + "\n";
+        if (NakitAlim) {
+            text += "Brüt Tutar    :" + data.Tutar + "\n";
+        }
+
+        text += "Fire Ağırlık    :" + data.Fire + "\n";
+        text += "Net Ağırlık : " + data.NetAgirlik + "\n";
+        if (NakitAlim) {
+            text += "Net Tutar : " + data.NetTutar + "\n";
+            text += "Kesinti Tutar     :" + data.KesintiTutar + "\n";
+        }
+
+        text += "*Yapılan KG Kesintileri: \n";
+        text += GenerateKesintiAltToplamlar(data.FireKesintiAltToplamlar, 1);
+
+        if (NakitAlim) {
+            text += "*Yapılan TL Kesintileri: \n";
+            text += GenerateKesintiAltToplamlar(data.TutarKesintiAltToplamlar, 2);
+        }
+
+        return text;
+    }
+
+    private String GenerateKesintiAltToplamlar(List<AlimKesintiAltToplam> pList, Integer pKesintiTip) {
+        String KesintiDetay = "";
+        for (AlimKesintiAltToplam item : pList) {
+            if (pKesintiTip == 1) {
+                KesintiDetay = KesintiDetay + "\t" + item.KESINTI_TANIM + "\t:"
+                        + String.format("%.2f", item.KESINTI_MIKTAR) + "  KG\n";
+            } else {
+                KesintiDetay = KesintiDetay + "\t" + item.KESINTI_TANIM + "\t:"
+                        + String.format("%.5f", item.KESINTI_MIKTAR) + " TL\n";
+            }
+        }
+
+        return KesintiDetay;
+
+    }
+
+    private String GenerateUreticiBilgileriForGunSonu(Alim data) {
+        String NakitBilgiler = "";
+        String OdemeYapildi = "";
+        if (data.NakitAlim) {
+            NakitBilgiler = "Net Tutar      :" + data.NetTutar + " \n";
+            OdemeYapildi = data.NetTutar + " Ödeme yapıldı\n";
+        }
+        String text = "**************************************\n" + "Tarih/Saat    :" + data.Tarih + "\n"
+                + "Mustahsil      :" + data.UreticiAdi + "\n" + "Net Ağırlık    :" + data.NetAgirlik + "\n"
+                + NakitBilgiler + "------------------------------------------------";
         return text;
     }
 
@@ -434,7 +827,13 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
         exec.execute(new Thread(new Runnable() {
             @Override
             public void run() {
-                piccReader.open();
+                try {
+                    piccReader.open();
+                } catch (Exception Ex) {
+                    Log.w("TEST", "CATCH Thread");
+
+                }
+
             }
         }, "picc open"));
     }
@@ -449,38 +848,42 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
      */
 
     public void NfcReaderInit() {
-        piccReader = new PiccManager();
-        exec = Executors.newSingleThreadExecutor();
+        try {
+            piccReader = new PiccManager();
+            exec = Executors.newSingleThreadExecutor();
 
-        handler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                WritableMap map = new WritableNativeMap();
+            handler = new Handler() {
+                @Override
+                public void handleMessage(Message msg) {
+                    WritableMap map = new WritableNativeMap();
 
-                switch (msg.what) {
-                case MSG_READING_SUCCESS:
+                    switch (msg.what) {
+                        case MSG_READING_SUCCESS:
 
-                    String uid = (String) msg.obj;
+                            String uid = (String) msg.obj;
 
-                    map.putString("HasError", "False");
-                    map.putString("ErrMsg", "");
-                    map.putString("Tag", uid);
+                            map.putString("HasError", "False");
+                            map.putString("ErrMsg", "");
+                            map.putString("Tag", uid);
 
-                    break;
-                case MSG_READING_FAIL:
+                            break;
+                        case MSG_READING_FAIL:
 
-                    map.putString("HasError", "True");
-                    map.putString("ErrMsg", "Kart okunamadı.");
-                    map.putString("Tag", "-1");
-                    break;
-                default:
-                    break;
+                            map.putString("HasError", "True");
+                            map.putString("ErrMsg", "Kart okunamadı.");
+                            map.putString("Tag", "-1");
+                            break;
+                        default:
+                            break;
+                    }
+
+                    sendEvent("PiccManager", map);
+                    super.handleMessage(msg);
                 }
-
-                sendEvent("PiccManager", map);
-                super.handleMessage(msg);
-            }
-        };
+            };
+        } catch (Exception ex) {
+            Log.w("TEST", "CATCH");
+        }
     }
 
     public void CheckPicc() {
@@ -489,21 +892,24 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
             @Override
             public void run() {
 
-                byte CardType[] = new byte[2];
-                byte Atq[] = new byte[14];
-                char SAK = 1;
-                byte sak[] = new byte[1];
-                sak[0] = (byte) SAK;
-                byte SN[] = new byte[10];
-                scan_card = piccReader.request(CardType, Atq);
-                Log.w("TEST", "OK");
+                try {
+                    byte CardType[] = new byte[2];
+                    byte Atq[] = new byte[14];
+                    char SAK = 1;
+                    byte sak[] = new byte[1];
+                    sak[0] = (byte) SAK;
+                    byte SN[] = new byte[10];
+                    scan_card = piccReader.request(CardType, Atq);
 
-                Log.w("TEST", Integer.toString(scan_card));
-                if (scan_card > 0) {
-                    SNLen = piccReader.antisel(SN, sak);
-                    Message msg = handler.obtainMessage(MSG_READING_SUCCESS);
-                    msg.obj = bytesToHexString(SN, SNLen);
-                    handler.sendMessage(msg);
+                    Log.w("TEST", Integer.toString(scan_card));
+                    if (scan_card > 0) {
+                        SNLen = piccReader.antisel(SN, sak);
+                        Message msg = handler.obtainMessage(MSG_READING_SUCCESS);
+                        msg.obj = bytesToHexString(SN, SNLen);
+                        handler.sendMessage(msg);
+                    }
+                } catch (Exception ex) {
+                    Log.w("TEST", "NFC okuma basarisiz");
                 }
 
             }
@@ -542,5 +948,84 @@ public class RNAndroidPrinterNFCModule extends ReactContextBaseJavaModule {
 
     }
     // @@@@@@@@@@ FUNCTIONS @@@@@@@@@@@@@@@@@@@@@@
+
+    // let testFis =
+    // "\n\n" +
+    // "\n\t\t\t\t\tDOĞUŞ ÇAY\n" +
+    // "\t\t\tBİLGİLENDİRME FİŞİ\n" +
+    // "\t\t\t\t\tFİŞ TEKRARI\n" +
+    // "------------------------------------------------\n" +
+    // "Tarih/Saat :26.03.2021 13:39\n" +
+    // "Fabrika :CTS YAZILIM\n"+
+    // "Alım Yeri :İZMİR-BALÇOVA\n" +
+    // "Eksper Adı :SELÇUK AKŞAR\n" +
+    // "**************************************\n" +
+    // "Mustahsil :TUĞBA AKŞAR\n"+
+    // "Cüzdan No :25(BALÇOVA)\n" +
+    // "Brüt Ağırlık :500 KG\n" +
+    // "Fire :50 KG\n" +
+    // "Tutar :500 TL\n" +
+    // "Kesinti Tutar:50 TL\n"+
+    // "Net Tutar :450 TL \n"+
+    // "------------------------------------------------" +
+    // "NET AĞIRLIK: 450 KG \n"+
+    // "ÖDEME: VADE-35\n" +
+    // "450 TL ÖDEME YAPILDI\n\n" +
+    // "İmza :" + "______________________"+
+    // "\n\n\n\n";
+
+    // let testGunSonuFis =
+    // "\n\n" +
+    // "\n\t\t\t\t\tDOĞUŞ ÇAY\n" +
+    // "\t\t 2021-03-26 Tarihi Gün Sonu\n" +
+    // "------------------------------------------------\n" +
+    // "Fabrika :CTS YAZILIM\n"+
+    // "Alım Yeri :İZMİR-BALÇOVA\n" +
+    // "Eksper Adı :SELÇUK AKŞAR\n" +
+    // "_____________________________\n" +
+    // "** VADE35 3 TL BRUT SÜRGÜN SONU ÖDEME TEST **\n" +
+    // "**************************************\n" +
+    // "Tarih/Saat :26.03.2021 13:39\n" +
+    // "Mustahsil :TUĞBA AKŞAR\n"+
+    // "Net Ağırlık :500 KG\n" +
+    // "**************************************\n" +
+    // "Tarih/Saat :26.03.2021 13:39\n" +
+    // "Mustahsil :TUĞBA AKŞAR\n"+
+    // "Net Ağırlık :500 KG\n" +
+    // "**************************************\n" +
+    // "Tarih/Saat :26.03.2021 13:39\n" +
+    // "Mustahsil :TUĞBA AKŞAR\n"+
+    // "Net Ağırlık :500 KG\n" +
+    // "**************************************\n" +
+    // "\t\tVADE35 Ağırlık Özeti \n"+
+    // "Toplam Brüt Ağırlık : 1500 KG\n"+
+    // "Toplam Fire Ağırlık : 100 KG\n"+
+    // "Toplam Net Ağırlık : 1400 KG\n"+
+    // "Toplam Fiş : 3 Adet\n"+
+    // "-----------------------------------------\n"+
+    // "** VADE2 3 TL BRUT SÜRGÜN SONU ÖDEME TEST **\n" +
+    // "**************************************\n" +
+    // "Tarih/Saat :26.03.2021 13:39\n" +
+    // "Mustahsil :OSMAN AKŞAR\n"+
+    // "Net Ağırlık :500 KG\n" +
+    // "**************************************\n" +
+    // "Tarih/Saat :26.03.2021 13:39\n" +
+    // "Mustahsil :OSMAN AKŞAR\n"+
+    // "Net Ağırlık :500 KG\n" +
+    // "**************************************\n" +
+    // "\t\tVADE2 Ağırlık Özeti \n"+
+    // "Toplam Brüt Ağırlık : 1000 KG\n"+
+    // "Toplam Fire Ağırlık : 50 KG\n"+
+    // "Toplam Net Ağırlık : 950 KG\n"+
+    // "Toplam Fiş : 2 Adet\n"+
+    // "#######################\n"+
+    // "\t TOPLAM AĞIRLIK ÖZETİ \n"+
+    // "Toplam Brüt Ağırlık : 2500 KG\n"+
+    // "Toplam Fire Ağırlık : 150 KG\n"+
+    // "Toplam Net Ağırlık : 2350 KG\n"+
+    // "Toplam Fiş : 5 Adet\n\n"+
+    // "İmza :" + "______________________"+
+    // "\n\n\n\n\n";
+    // this.testFis(testGunSonuFis);
 
 }
